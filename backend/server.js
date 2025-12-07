@@ -22,9 +22,10 @@ connectDB();
 
 // CORS must be configured BEFORE other middleware
 const allowedOrigins = [
-  "http://localhost:5173",  // Local development
-  process.env.FRONTEND_URL  // Production frontend
-].filter(Boolean); // Remove undefined values
+  "http://localhost:5173", 
+  "https://frontendebookify.vercel.app" ,
+  process.env.FRONTEND_URL  
+].filter(Boolean);
 
 app.use(
   cors({
