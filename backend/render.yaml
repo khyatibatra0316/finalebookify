@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: finalebookify-backend
+    runtime: node
+    region: virginia
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: NODE_ENV
+        value: production
