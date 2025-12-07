@@ -4,7 +4,7 @@ import userModel from "../models/userModel.js";
 // import transporter from '../config/nodemailer.js';
 
 export const register = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, role } = req.body;
 
   if (!name || !email || !password) {
     return res.json({ success: false, message: "Missing Details" });
@@ -18,25 +18,35 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = new userModel({ name, email, password: hashedPassword });
+    const user = new userModel({
+      name,
+      email,
+      password: hashedPassword,
+      role: role || 'reader' // Set role from request or default to reader
+    });
     await user.save();
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
+    // Set cookie for backward compatibility
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
-    const mailOptions={
-        from:process.env.SENDER_EMAIL,
-        to:email,
-        subject:"Welcome to eBookify",
-        text:`Welcome to eBookify, your account has been created with email id ${email}`
-    }
-    // await transporter.sendMail(mailOptions)
-    return res.json({ success: true });
+
+    // Return token and user data in response body for localStorage
+    return res.json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
 
   } catch (error) {
     return res.json({ success: false, message: error.message });
@@ -63,6 +73,7 @@ export const login = async (req, res) => {
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
+    // Set cookie for backward compatibility
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -70,7 +81,17 @@ export const login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    return res.json({ success: true });
+    // Return token and user data in response body for localStorage
+    return res.json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
 
   } catch (error) {
     return res.json({ success: false, message: error.message });
@@ -92,37 +113,37 @@ export const logout = async (req, res) => {
   }
 };
 
-export const isAuthenticated=async(req,res)=>{
-    try{
-        return res.json({success:true})
-    }catch(error){
-        res.json({scucess:false, message:error.message})
-    }
+export const isAuthenticated = async (req, res) => {
+  try {
+    return res.json({ success: true })
+  } catch (error) {
+    res.json({ scucess: false, message: error.message })
+  }
 }
 
 export const resetPassword = async (req, res) => {
-    const { token } = req.params;
-    const { email,newPassword } = req.body;
-  
-    try {
-    //   const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await userModel.findById({email});
-  
-      if (!user) {
-        return res.json({ success: false, message: "User not found" });
-      }
-  
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      user.password = hashedPassword;
-      await user.save();
-  
-      return res.json({ success: true, message: "Password reset successful!" });
-    } catch (error) {
-      return res.json({ success: false, message: "Invalid or expired token" });
-    }
-  };
+  const { token } = req.params;
+  const { email, newPassword } = req.body;
 
-  
+  try {
+    //   const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await userModel.findById({ email });
+
+    if (!user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.json({ success: true, message: "Password reset successful!" });
+  } catch (error) {
+    return res.json({ success: false, message: "Invalid or expired token" });
+  }
+};
+
+
 export const generateResetToken = async (req, res) => {
   const { email } = req.body;
 
@@ -189,4 +210,3 @@ export const generateResetToken = async (req, res) => {
 //     res.json({ success: false, message: error.message });
 //   }
 // };
-  
